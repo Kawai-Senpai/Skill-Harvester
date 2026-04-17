@@ -1,0 +1,15 @@
+# Strong seed repositories for agent skill collection.
+# Mix of official examples, registries, and popular community packs.
+
+openclaw/skills
+anthropics/skills
+vercel-labs/skills
+vercel-labs/agent-skills
+github/awesome-copilot
+microsoft/azure-skills
+microsoft/github-copilot-for-azure
+remotion-dev/skills
+firebase/agent-skills
+get-convex/agent-skills
+VoltAgent/awesome-agent-skills
+skillmatic-ai/awesome-agent-skills
