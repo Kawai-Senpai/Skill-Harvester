@@ -5,7 +5,7 @@ import argparse
 import shutil
 import sys
 from pathlib import Path
-from typing import Tuple
+from typing import Iterable, Tuple
 
 
 def parse_owner_repo(repo_folder: str) -> Tuple[str, str]:
@@ -27,6 +27,40 @@ def unique_dest(out_dir: Path, base_name: str) -> Path:
         idx += 1
 
 
+def count_lines(path: Path) -> int:
+    try:
+        return len(path.read_text(encoding="utf-8", errors="replace").splitlines())
+    except OSError:
+        return 0
+
+
+def iter_files(root: Path) -> Iterable[Path]:
+    for item in root.rglob("*"):
+        if item.is_file():
+            yield item
+
+
+def has_only_metadata_files(skill_dir: Path) -> bool:
+    allowed_names = {".collector-manifest.json"}
+    allowed_exts = {".md", ".json", ".jsonl", ".csv", ".txt"}
+    for file_path in iter_files(skill_dir):
+        if file_path.name in allowed_names:
+            continue
+        if file_path.suffix.lower() in allowed_exts:
+            continue
+        return False
+    return True
+
+
+def should_skip_skill(skill_dir: Path, min_lines: int = 200) -> bool:
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.exists():
+        return False
+    if count_lines(skill_md) >= min_lines:
+        return False
+    return has_only_metadata_files(skill_dir)
+
+
 def flatten_vault(input_dir: Path, output_dir: Path, clean: bool) -> int:
     repos_dir = input_dir / "repos"
     if not repos_dir.exists():
@@ -40,6 +74,7 @@ def flatten_vault(input_dir: Path, output_dir: Path, clean: bool) -> int:
 
     copied = 0
     collisions = 0
+    skipped_small = 0
 
     for skill_md in repos_dir.rglob("SKILL.md"):
         skill_dir = skill_md.parent
@@ -48,6 +83,9 @@ def flatten_vault(input_dir: Path, output_dir: Path, clean: bool) -> int:
             continue
         repo_folder = rel.parts[0]
         owner, repo = parse_owner_repo(repo_folder)
+        if should_skip_skill(skill_dir):
+            skipped_small += 1
+            continue
         skill_name = skill_dir.name
         dest = output_dir / skill_name
         if dest.exists():
@@ -58,6 +96,8 @@ def flatten_vault(input_dir: Path, output_dir: Path, clean: bool) -> int:
         copied += 1
 
     print(f"Copied {copied} skills into {output_dir}")
+    if skipped_small:
+        print(f"Skipped {skipped_small} short metadata-only skills")
     if collisions:
         print(f"Resolved {collisions} name collisions by adding owner/repo suffixes")
     return 0

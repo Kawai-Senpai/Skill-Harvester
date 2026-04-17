@@ -1,0 +1,1 @@
+python scripts/collect_skills.py collect --out ./skill-vault --seed-file assets/seed-repos.txt --workers 2

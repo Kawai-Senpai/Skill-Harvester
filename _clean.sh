@@ -1,0 +1,1 @@
+python scripts/flatten_vault.py --in ./skill-vault --out ./skill-vault-flat --clean
