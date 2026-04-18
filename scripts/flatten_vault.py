@@ -5,7 +5,7 @@ import argparse
 import shutil
 import sys
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Tuple
 
 
 def parse_owner_repo(repo_folder: str) -> Tuple[str, str]:
@@ -34,31 +34,46 @@ def count_lines(path: Path) -> int:
         return 0
 
 
-def iter_files(root: Path) -> Iterable[Path]:
-    for item in root.rglob("*"):
-        if item.is_file():
-            yield item
-
-
-def has_only_metadata_files(skill_dir: Path) -> bool:
+def analyze_skill_contents(skill_dir: Path) -> Tuple[int, int, int]:
+    extra_md_files = 0
+    nested_dirs = 0
+    non_metadata_files = 0
     allowed_names = {".collector-manifest.json"}
-    allowed_exts = {".md", ".json", ".jsonl", ".csv", ".txt"}
-    for file_path in iter_files(skill_dir):
+    allowed_exts = {".json", ".jsonl", ".csv", ".txt", ".yaml", ".yml"}
+    for file_path in skill_dir.rglob("*"):
+        if file_path.is_dir():
+            nested_dirs += 1
+            continue
+        if file_path.name.lower() == "skill.md":
+            continue
         if file_path.name in allowed_names:
             continue
-        if file_path.suffix.lower() in allowed_exts:
+        ext = file_path.suffix.lower()
+        if ext == ".md":
+            extra_md_files += 1
             continue
-        return False
-    return True
+        if ext in allowed_exts:
+            continue
+        non_metadata_files += 1
+    return extra_md_files, nested_dirs, non_metadata_files
 
 
-def should_skip_skill(skill_dir: Path, min_lines: int = 200) -> bool:
+def should_skip_skill(skill_dir: Path, min_lines: int = 200, min_extra_md_to_keep: int = 2) -> bool:
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.exists():
         return False
     if count_lines(skill_md) >= min_lines:
         return False
-    return has_only_metadata_files(skill_dir)
+
+    extra_md_files, nested_dirs, non_metadata_files = analyze_skill_contents(skill_dir)
+
+    if non_metadata_files > 0:
+        return False
+    if nested_dirs > 0:
+        return False
+    if extra_md_files >= min_extra_md_to_keep:
+        return False
+    return True
 
 
 def flatten_vault(input_dir: Path, output_dir: Path, clean: bool) -> int:

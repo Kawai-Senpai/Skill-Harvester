@@ -1,3 +1,7 @@
 skill-vault
 skill-vault\repos
 skill-vault-flat
+__pycache__
+*.pyc
+*.pyo
+*.pyd
